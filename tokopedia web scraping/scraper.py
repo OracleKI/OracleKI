@@ -1,42 +1,41 @@
 import selenium
-from selenium.webdriver.common.by import By                             # By to get element using selector              
-from selenium import webdriver as wb                                    # wb to run the driver
-from selenium.webdriver.support import expected_conditions as EC        # EC to handle exception conditions
-from selenium.webdriver.support.ui import WebDriverWait as wait         # wait to handle wait conditions
-import pandas as pd                                                     # pd to export data
-from tqdm import tqdm                                                   # tqdm to visualize looping process
-from selenium.webdriver.common.keys import Keys                         # Keys as procedures using the keyboards
+from selenium.webdriver.common.by import By                             # by untuk mendapatkan elemen menggunakan pemilih              
+from selenium import webdriver as wb                                    # wb untuk menjalankan driver
+from selenium.webdriver.support import expected_conditions as EC        # EC untuk mengatasi kondisi pengecualian
+from selenium.webdriver.support.ui import WebDriverWait as wait         # wait untuk mengatasi kondisi menunggu
+import pandas as pd                                                     # pd untuk mengekspor data
+from tqdm import tqdm                                                   # tqdm untuk visualisasi proses perulangan
+from selenium.webdriver.common.keys import Keys                         # Kunci sebagai prosedur menggunakan keyboard
 import datetime
 
-
-# initialize driver Chrome to run simulation and get URL
+# Inisialisasi Driver Chrome untuk menjalankan simulasi dan mendapatkan URL
 driver = wb.Chrome()
 driver.get('https://www.tokopedia.com/')
 
 driver.implicitly_wait(5)
 
-# initialize input to get keywords and pages
+# Inisialisasi input untuk mendapatkan kata kunci dan halaman
 keywords = input("Keywords: ")
 pages = int(input("Pages: "))
 
-# initialize search to search by keywords and press ENTER
+# Inisialisasi pencarian untuk mencari berdasarkan kata kunci dan tekan tombol ENTER
 search = driver.find_element(By.XPATH, '//*[@id="header-main-wrapper"]/div[2]/div[2]/div/div/div/div/input')
 search.send_keys(keywords)
 search.send_keys(Keys.ENTER)
 
 driver.implicitly_wait(5)
 
-# initialize product_data to store product data as an array
+# Inisialisasi product_data untuk menyimpan data produk sebagai sebuah array
 product_data = []
 
-# define scrolling to scroll page
+# Definisikan scrolling untuk scroll halaman
 def scrolling():
     scheight = .1
     while scheight < 9.9:
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight/%s);" % scheight)
         scheight += .01
 
-# define reverse_scrolling to reverse the scroll
+# Definisikan reverse_scrolling untuk membalikkan scroll
 def reverse_scrolling():
     body = driver.find_element(By.TAG_NAME, 'body')
 
@@ -48,17 +47,17 @@ def reverse_scrolling():
         if i >= 25:
             break
 
-# define extract_data to extract data using driver
+# Definisikan extract_data untuk mengekstrak data menggunakan driver
 def extract_data(driver):
 
     driver.implicitly_wait(20)
     driver.refresh()
     scrolling()
 
-    # get the data item using XPATH selector, wait up for 30 secs if it exceeds it will issue an exception
+    # Mendapatkan item data menggunakan pemilih XPATH, tunggu selama 30 detik jika melebihi batas waktu akan memunculkan pengecualian
     data_item = wait(driver, 30).until(EC.presence_of_all_elements_located((By.XPATH, '//div[contains(@class, "css-12sieg3")]')))
 
-    # if the data items do not add up to 80 it will repeat the data retrieval process
+    # Jika item data tidak mencapai 80, maka proses pengambilan data akan diulang
     if len(data_item) != 80:
         driver.refresh()
         driver.implicitly_wait(10)
@@ -66,7 +65,7 @@ def extract_data(driver):
 
         data_item = wait(driver, 30).until(EC.presence_of_all_elements_located((By.XPATH, '//div[contains(@class, "css-12sieg3")]')))
 
-    # loop to extract attribute data using XPATH selector
+    # loop untuk mengekstrak data atribut menggunakan pemilih XPATH
     for item in tqdm(data_item):
 
         element = wait(item, 10).until(EC.presence_of_element_located((By.XPATH, './/div[@class="css-y5gcsw"]')))
@@ -86,7 +85,7 @@ def extract_data(driver):
 
         details_link = element.find_element(By.XPATH, './/div[@class="css-1f2quy8"]/a').get_property('href')
 
-        # store data to the dictionary
+        # impan data ke dalam dictionary.
         data = {
             'name': name,
             'price': price,
@@ -96,16 +95,16 @@ def extract_data(driver):
             'details_link': details_link
         }
 
-        # append data to product_data
+        # Tambahkan data ke product_data
         product_data.append(data)
 
 stop = 1
 
-# loop to scraping process 
+# loop untuk proses scraping 
 while stop <= pages:
     extract_data(driver)
 
-    # get the next button element using CSS selector, wait up for 60 secs if it exceeds it will issue an exception
+    # "Dapatkan elemen tombol selanjutnya menggunakan pemilih CSS, tunggu hingga 60 detik, jika melebihi waktu tersebut, akan menghasilkan pengecualian
     try:
         next_page = wait(driver, 60).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '[aria-label="Laman berikutnya"]')))
     except:
@@ -115,22 +114,17 @@ while stop <= pages:
         scrolling()
         next_page = wait(driver, 60).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '[aria-label="Laman berikutnya"]')))
     
-    # click the next_page button
+    # Klik tombol halaman berikutnya
     try:
         next_page.click()
     except:
         break
 
     stop += 1
-
     
 df = pd.DataFrame(product_data)
 
 now = datetime.datetime.today().strftime('%d-%m-%Y')
 
-# export data to csv and json
+# Ekspor data ke dalam format CSV 
 df.to_csv(f'sample_data_{now}.csv', index=False)
-df.to_json(f'sample_data_{now}.json', orient='records')
-
-
-
